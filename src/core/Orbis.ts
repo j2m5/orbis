@@ -60,8 +60,6 @@ class Orbis {
     this.object3D = this.createSphere()
     this.scene.add(this.object3D)
 
-    console.log(this.scene)
-
     this.animate()
   }
 
