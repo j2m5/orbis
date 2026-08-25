@@ -15,13 +15,17 @@ export const StandardPlanetShader: IShader = {
 
     varying vec2 vUv;
     varying vec3 vNormal;
+    varying vec3 vPosition;
 
     void main() {
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+
       gl_Position = projectionMatrix * mvPosition;
 
       vUv = uv;
-      vNormal = normal;
+      vNormal = normalize(normalMatrix * normal);
+      vPosition = worldPosition.xyz;
     }
   `,
   fragmentShader: `
@@ -32,6 +36,7 @@ export const StandardPlanetShader: IShader = {
 
     varying vec2 vUv;
     varying vec3 vNormal;
+    varying vec3 vPosition;
 
     uniform sampler2D diffuseMap;
     uniform sampler2D nightMap;
@@ -40,13 +45,16 @@ export const StandardPlanetShader: IShader = {
     void main() {
       ${ShaderChunk['logdepthbuf_fragment']}
 
-      vec3 normal = normalize(vNormal);
-      vec3 diffuseSample = texture2D(diffuseMap, vUv).rgb;
-      vec3 nightSample = texture2D(nightMap, vUv).rgb;
+      vec4 dayColor = texture2D(diffuseMap, vUv);
+      vec4 nightColor = texture2D(nightMap, vUv);
 
-      vec3 finalColor = mix(diffuseSample, nightSample, 0.5);
+      vec3 lightDir = normalize(lightPosition - vPosition);
+      float intensity = dot(vNormal, lightDir);
+      float mixFactor = clamp(intensity * 0.5 + 0.5, 0.0, 1.0);
 
-      gl_FragColor = vec4(finalColor, 1.0);
+      vec4 finalColor = mix(nightColor, dayColor, mixFactor);
+
+      gl_FragColor = finalColor;
     }
   `
 }
