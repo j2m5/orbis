@@ -26,6 +26,8 @@ export const StandardPlanetShader: IShader = {
       vUv = uv;
       vNormal = normalize(normalMatrix * normal);
       vPosition = worldPosition.xyz;
+
+      ${ShaderChunk['logdepthbuf_vertex']}
     }
   `,
   fragmentShader: `
