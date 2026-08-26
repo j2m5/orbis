@@ -15,6 +15,10 @@ const App = observer(() => {
     orbisStore.setBackgroundColor(value)
   }
 
+  const handlePlanetRadiusChange = (value: string) => {
+    orbisStore.setPlanetRadius(value)
+  }
+
   return (
     <>
       <TitanTopbar style={{ position: 'fixed', top: 0, zIndex: 999999, width: '100%' }}>{config('name')}</TitanTopbar>
@@ -27,7 +31,9 @@ const App = observer(() => {
           onChange={handleBackgroundColorChange}
         />
       </TitanContainer>
-      <TitanContainer width={400} style={{ position: 'fixed', right: 10, top: 80, zIndex: 999999 }}>123</TitanContainer>
+      <TitanContainer width={400} style={{ position: 'fixed', right: 10, top: 80, zIndex: 999999 }}>
+        <TitanInput type="number" label="Радиус" value={orbisStore.planetRadius} onChange={handlePlanetRadiusChange} />
+      </TitanContainer>
     </>
   )
 })

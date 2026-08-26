@@ -36,7 +36,7 @@ class Orbis {
 
   public constructor() {
     this.scene = new Scene()
-    this.camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.0001, 1500000)
+    this.camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.0001, 1500000)
     this.renderer = new WebGLRenderer({ logarithmicDepthBuffer: true, antialias: true })
 
     const sphere: Sphere = new Sphere(this.camera.position.clone(), 0.000001)
@@ -68,11 +68,12 @@ class Orbis {
 
     this.scene.add(this.grid)
 
-
     this.sphere = new Planet()
     this.object3D = this.sphere.make()
     this.object3D.position.set(0, 0, 0).add(this.origin)
-    this.object3D.rotateY(150 * Math.PI / 180)
+    this.object3D.rotateY((150 * Math.PI) / 180)
+
+    this.sphere.subscribe('radiusChanged', (radius) => this.setRadius(radius))
 
     this.loadTextures()
 
@@ -120,6 +121,10 @@ class Orbis {
     } catch (error) {
       console.error('Error loading textures:', error)
     }
+  }
+
+  private setRadius(radius: number): void {
+    this.object3D.scale.setScalar(radius)
   }
 }
 

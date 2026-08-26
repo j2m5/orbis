@@ -3,6 +3,7 @@ import { makeAutoObservable } from 'mobx'
 class OrbisStore {
   public visibleGrid: boolean = true
   public backgroundColor: string = '#000000'
+  public planetRadius: number = 6000
 
   public constructor() {
     makeAutoObservable(this)
@@ -14,6 +15,10 @@ class OrbisStore {
 
   public setBackgroundColor(color: string): void {
     this.backgroundColor = color
+  }
+
+  public setPlanetRadius(radius: string): void {
+    this.planetRadius = Number(radius)
   }
 }
 

@@ -1,44 +1,35 @@
-type EventMap = Record<string, unknown>
+type EventMap = Record<string, unknown[]>
 
-interface Observer<M extends EventMap, K extends keyof M & string = keyof M & string> {
-  update(event: K, data?: M[K]): void
-}
-
-class EventEmitter<M extends EventMap> {
-  private readonly observers: Map<string, Observer<M>[]> = new Map()
+class EventEmitter<TEvents extends EventMap = EventMap> {
+  private readonly events: { [K in keyof TEvents]?: Array<(...args: TEvents[K]) => void> }
 
   public constructor() {
-    this.observers.set('*', [])
+    this.events = {}
   }
 
-  public attach<K extends keyof M & string>(observer: Observer<M, K>, event: K): void
-  public attach(observer: Observer<M>, event?: '*'): void
-  public attach(observer: Observer<M>, event: string = '*'): void {
-    const group = this.observers.get(event) || []
-
-    group.push(observer)
-
-    this.observers.set(event, group)
+  public subscribe<K extends keyof TEvents>(event: K, callback: (...args: TEvents[K]) => void): void {
+    if (!this.events[event]) {
+      this.events[event] = []
+    }
+    this.events[event]!.push(callback)
   }
 
-  public detach(observer: Observer<M>, event: (keyof M & string) | '*'): void {
-    const group = this.observers.get(event)
-
-    if (!group) return
-
-    this.observers.set(event, group.filter(o => o !== observer))
+  public unsubscribe<K extends keyof TEvents>(event: K, callback: (...args: TEvents[K]) => void): void {
+    const callbacks = this.events[event]
+    if (callbacks) {
+      this.events[event] = callbacks.filter((fn): boolean => fn !== callback)
+    }
   }
 
-  public emit<K extends keyof M & string>(event: K, data?: M[K]): void {
-    const group = this.observers.get(event) || []
-    const all = this.observers.get('*') || []
-
-    for (const observer of [...group, ...all]) {
-      observer.update(event, data)
+  public emit<K extends keyof TEvents>(event: K, ...args: TEvents[K]): void {
+    const callbacks = this.events[event]
+    if (callbacks) {
+      callbacks.forEach((callback): void => {
+        callback(...args)
+      })
     }
   }
 }
 
-export type { EventMap, Observer }
+export type { EventMap }
 export { EventEmitter }
-
