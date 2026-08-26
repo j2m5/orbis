@@ -9,11 +9,15 @@ import {
   Vector3,
   WebGLRenderer,
   Color,
-  GridHelper, Sphere
+  GridHelper,
+  Sphere,
+  ImageBitmapLoader, Texture
 } from 'three'
 import { AstroControls } from '@/core/framework/controls/AstroControls'
 import { orbisStore } from '@/editor/store/OrbisStore'
 import { Planet } from '@/core/renderable/Planet.ts'
+// @ts-ignore
+import { degToRad } from 'three/src/math/MathUtils'
 
 class Orbis {
   public scene: Scene
@@ -22,6 +26,7 @@ class Orbis {
 
   public controls: AstroControls
 
+  declare private sphere: Planet
   declare private object3D: Object3D
   declare private grid: GridHelper
 
@@ -65,9 +70,13 @@ class Orbis {
     this.scene.add(this.grid)
 
 
-    const sphere = new Planet()
-    this.object3D = sphere.make()
+    this.sphere = new Planet()
+    this.object3D = this.sphere.make()
     this.object3D.position.set(0, 0, 0).add(this.origin)
+    this.object3D.rotateY(degToRad(150))
+
+    this.loadTextures()
+
     this.scene.add(this.object3D)
 
     this.scene.add(this.createLight())
@@ -92,6 +101,26 @@ class Orbis {
     this.controls.update(performance.now())
     this.renderer.render(this.scene, this.camera)
     this.renderer.setAnimationLoop(this.boundOnAnimate)
+  }
+
+  private async loadTextures(): Promise<void> {
+    try {
+      const loader = new ImageBitmapLoader()
+      loader.setOptions({ imageOrientation: 'flipY' })
+
+      const diffuseBitmap = await loader.loadAsync('storage/moon.jpg')
+      const nightBitmap = await loader.loadAsync('storage/night.jpg')
+
+      const diffuse = new Texture(diffuseBitmap)
+      diffuse.needsUpdate = true
+      const night = new Texture(nightBitmap)
+      night.needsUpdate = true
+
+      this.sphere.setDiffuse(diffuse)
+      this.sphere.setNight(night)
+    } catch (error) {
+      console.error('Error loading textures:', error)
+    }
   }
 }
 

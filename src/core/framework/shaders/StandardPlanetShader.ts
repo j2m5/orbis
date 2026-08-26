@@ -14,18 +14,22 @@ export const StandardPlanetShader: IShader = {
     ${ShaderChunk['logdepthbuf_pars_vertex']}
 
     varying vec2 vUv;
-    varying vec3 vNormal;
     varying vec3 vPosition;
+    varying vec3 vNormal;
+    varying vec3 vViewLightDirection;
+
+    uniform vec3 lightPosition;
 
     void main() {
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+      vec4 viewLightDirection = viewMatrix * vec4(lightPosition, 1.0);
 
       gl_Position = projectionMatrix * mvPosition;
 
       vUv = uv;
+      vPosition = position;
       vNormal = normalize(normalMatrix * normal);
-      vPosition = worldPosition.xyz;
+      vViewLightDirection = normalize(viewLightDirection.xyz - mvPosition.xyz);
 
       ${ShaderChunk['logdepthbuf_vertex']}
     }
@@ -37,8 +41,9 @@ export const StandardPlanetShader: IShader = {
     ${ShaderChunk['logdepthbuf_pars_fragment']}
 
     varying vec2 vUv;
-    varying vec3 vNormal;
     varying vec3 vPosition;
+    varying vec3 vNormal;
+    varying vec3 vViewLightDirection;
 
     uniform sampler2D diffuseMap;
     uniform sampler2D nightMap;
@@ -50,11 +55,9 @@ export const StandardPlanetShader: IShader = {
       vec4 dayColor = texture2D(diffuseMap, vUv);
       vec4 nightColor = texture2D(nightMap, vUv);
 
-      vec3 lightDir = normalize(lightPosition - vPosition);
-      float intensity = dot(vNormal, lightDir);
-      float mixFactor = clamp(intensity * 0.5 + 0.5, 0.0, 1.0);
+      float intensity = max(dot(normalize(vNormal), normalize(vViewLightDirection)), 0.0);
 
-      vec4 finalColor = mix(nightColor, dayColor, mixFactor);
+      vec4 finalColor = mix(nightColor, dayColor, intensity);
 
       gl_FragColor = finalColor;
     }
