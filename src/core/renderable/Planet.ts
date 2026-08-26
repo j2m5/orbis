@@ -1,45 +1,60 @@
-import {
-  BufferGeometry,
-  Mesh,
-  type Object3D,
-  ShaderMaterial,
-  SphereGeometry,
-  Texture
-} from 'three'
+import { BufferGeometry, Mesh, ShaderMaterial, SphereGeometry, Texture, UniformsUtils } from 'three'
 import { StandardPlanetShader } from '@/core/framework/shaders/StandardPlanetShader'
-import { orbisStore } from '@/editor/store/OrbisStore'
-import { EventEmitter } from '@/core/framework/events/EventEmitter'
+import { DEFAULT_PLANET_PARAMETERS, isPlanetRadius, type PlanetParameters } from '@/core/contracts'
 
-class Planet extends EventEmitter<{ radiusChanged: [number] }> {
-  declare public geometry: BufferGeometry
-  declare public material: ShaderMaterial
-  declare public object3D: Object3D
+function createDefaultMaterial(): ShaderMaterial {
+  return new ShaderMaterial({
+    ...StandardPlanetShader,
+    uniforms: UniformsUtils.clone(StandardPlanetShader.uniforms ?? {})
+  })
+}
+
+class Planet {
+  public readonly geometry: BufferGeometry
+  public readonly material: ShaderMaterial
+  public readonly object3D: Mesh<BufferGeometry, ShaderMaterial>
+
+  private parameters: PlanetParameters
 
   public constructor(geometry?: BufferGeometry, material?: ShaderMaterial) {
-    super()
     this.geometry = geometry ?? new SphereGeometry(1, 128, 128)
-    this.material = material ?? new ShaderMaterial({ ...StandardPlanetShader })
+    this.material = material ?? createDefaultMaterial()
+    this.object3D = new Mesh(this.geometry, this.material)
+    this.parameters = { ...DEFAULT_PLANET_PARAMETERS }
+
+    this.setRadius(this.parameters.radius)
   }
 
-  public make(): Object3D {
-    this.object3D = new Mesh(this.geometry, this.material)
-    this.object3D.scale.setScalar(orbisStore.planetRadius)
+  public get radius(): number {
+    return this.parameters.radius
+  }
 
-    return this.object3D
+  public applyParameters(parameters: Readonly<PlanetParameters>): void {
+    if (parameters.radius !== this.parameters.radius) {
+      this.setRadius(parameters.radius)
+    }
   }
 
   public setRadius(radius: number): void {
-    this.emit('radiusChanged', radius)
+    if (!isPlanetRadius(radius)) {
+      throw new RangeError('Planet radius must be a finite positive number')
+    }
+
+    this.parameters.radius = radius
+    this.object3D.scale.setScalar(radius)
   }
 
   public setDiffuse(diffuse: Texture): void {
     this.material.uniforms.diffuseMap.value = diffuse
-    this.material.needsUpdate = true
   }
 
   public setNight(night: Texture): void {
     this.material.uniforms.nightMap.value = night
-    this.material.needsUpdate = true
+  }
+
+  public dispose(): void {
+    this.geometry.dispose()
+    this.material.dispose()
   }
 }
 

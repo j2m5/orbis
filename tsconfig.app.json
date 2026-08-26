@@ -22,12 +22,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
 
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@public/*": ["public/*"],
-      "@storage/*": ["storage/*"],
-      "@titanui/*": ["src/editor/TitanUI/*"]
+      "@/*": ["./src/*"],
+      "@public/*": ["./public/*"],
+      "@storage/*": ["./storage/*"],
+      "@titanui/*": ["./src/editor/TitanUI/*"]
     }
   },
   "include": ["src"]

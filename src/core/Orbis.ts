@@ -1,106 +1,157 @@
 import {
-  Camera,
-  Mesh,
-  MeshBasicMaterial,
-  Object3D,
-  PerspectiveCamera,
-  Scene,
-  SphereGeometry,
-  Vector3,
-  WebGLRenderer,
   Color,
   GridHelper,
-  Sphere,
   ImageBitmapLoader,
-  Texture
+  Mesh,
+  MeshBasicMaterial,
+  PerspectiveCamera,
+  Scene,
+  Sphere,
+  SphereGeometry,
+  Texture,
+  Vector3,
+  WebGLRenderer
 } from 'three'
 import { AstroControls } from '@/core/framework/controls/AstroControls'
-import { orbisStore } from '@/editor/store/OrbisStore'
 import { Planet } from '@/core/renderable/Planet'
+import { DEFAULT_ORBIS_SETTINGS, type OrbisSettings } from '@/core/contracts'
 
 class Orbis {
-  public scene: Scene
-  public camera: Camera
-  public renderer: WebGLRenderer
+  public readonly scene: Scene
+  public readonly camera: PerspectiveCamera
+  public readonly renderer: WebGLRenderer
+  public readonly controls: AstroControls
+  public readonly planet: Planet
 
-  public controls: AstroControls
+  private readonly origin: Vector3 = new Vector3(100000, 0, 0)
+  private readonly boundOnAnimate: (time: number) => void
+  private readonly boundOnResize: () => void
+  private readonly textures: Texture[] = []
 
-  declare private sphere: Planet
-  declare private object3D: Object3D
-  declare private grid: GridHelper
-
-  private origin: Vector3 = new Vector3(100000, 0, 0)
-  private color: Color = new Color()
-
-  private readonly boundOnAnimate: () => void
+  private settings: OrbisSettings = { ...DEFAULT_ORBIS_SETTINGS }
+  private grid: GridHelper | null = null
+  private light: Mesh<SphereGeometry, MeshBasicMaterial> | null = null
+  private initialized: boolean = false
+  private disposed: boolean = false
+  private lastFrameTime: number = 0
 
   public constructor() {
     this.scene = new Scene()
     this.camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.0001, 1500000)
     this.renderer = new WebGLRenderer({ logarithmicDepthBuffer: true, antialias: true })
+    this.planet = new Planet()
 
-    const sphere: Sphere = new Sphere(this.camera.position.clone(), 0.000001)
-    this.controls = new AstroControls(this.camera, sphere, this.renderer.domElement)
-    this.controls.target = new Vector3(0, 0, 0).add(this.origin)
+    const cameraBoundary = new Sphere(this.camera.position.clone(), 0.000001)
+    this.controls = new AstroControls(this.camera, cameraBoundary, this.renderer.domElement)
+    this.controls.target.copy(this.origin)
     this.controls.movementSpeed = 0.1
 
-    this.scene.background = new Color(orbisStore.backgroundColor)
+    this.scene.background = new Color(this.settings.backgroundColor)
     this.renderer.setPixelRatio(devicePixelRatio)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.setClearColor('#000000', 0)
     this.camera.position.set(0, 0, -17000).add(this.origin)
-    this.camera.lookAt(new Vector3(0, 0, 0).add(this.origin))
+    this.camera.lookAt(this.origin)
 
     this.boundOnAnimate = this.animate.bind(this)
+    this.boundOnResize = this.resize.bind(this)
   }
 
-  public initialize(): void {
-    const canvas: HTMLCanvasElement = this.renderer.domElement
+  public initialize(container: HTMLElement = document.body): void {
+    if (this.disposed) {
+      throw new Error('Disposed Orbis instance cannot be initialized')
+    }
+
+    if (this.initialized) {
+      return
+    }
+
+    this.initialized = true
+
+    const canvas = this.renderer.domElement
     canvas.id = 'canvas'
     canvas.style.position = 'absolute'
+    canvas.style.inset = '0'
     canvas.style.zIndex = '99'
+    container.appendChild(canvas)
 
-    document.body.appendChild(canvas)
-
-    const size = 1500000
-    const divisions = 100
-    this.grid = new GridHelper(size, divisions)
-
+    this.grid = new GridHelper(1500000, 100)
+    this.grid.visible = this.settings.visibleGrid
     this.scene.add(this.grid)
 
-    this.sphere = new Planet()
-    this.object3D = this.sphere.make()
-    this.object3D.position.set(0, 0, 0).add(this.origin)
-    this.object3D.rotateY((150 * Math.PI) / 180)
+    this.planet.object3D.position.copy(this.origin)
+    this.planet.object3D.rotateY((150 * Math.PI) / 180)
+    this.scene.add(this.planet.object3D)
 
-    this.sphere.subscribe('radiusChanged', (radius) => this.setRadius(radius))
+    this.light = this.createLight()
+    this.scene.add(this.light)
 
-    this.loadTextures()
+    window.addEventListener('resize', this.boundOnResize)
+    this.renderer.setAnimationLoop(this.boundOnAnimate)
 
-    this.scene.add(this.object3D)
-
-    this.scene.add(this.createLight())
-
-    this.animate()
+    void this.loadTextures()
   }
 
-  private createLight(): Object3D {
+  public applySettings(settings: Readonly<OrbisSettings>): void {
+    if (settings.backgroundColor !== this.settings.backgroundColor) {
+      this.scene.background = new Color(settings.backgroundColor)
+    }
+
+    if (this.grid && settings.visibleGrid !== this.settings.visibleGrid) {
+      this.grid.visible = settings.visibleGrid
+    }
+
+    this.settings = { ...settings }
+  }
+
+  public dispose(): void {
+    if (this.disposed) {
+      return
+    }
+
+    this.disposed = true
+    this.renderer.setAnimationLoop(null)
+    window.removeEventListener('resize', this.boundOnResize)
+    this.controls.dispose()
+    this.textures.forEach((texture) => texture.dispose())
+    this.planet.dispose()
+
+    if (this.grid) {
+      this.grid.geometry.dispose()
+      const materials = Array.isArray(this.grid.material) ? this.grid.material : [this.grid.material]
+      materials.forEach((material) => material.dispose())
+    }
+
+    if (this.light) {
+      this.light.geometry.dispose()
+      this.light.material.dispose()
+    }
+
+    this.scene.clear()
+    this.renderer.dispose()
+    this.renderer.domElement.remove()
+  }
+
+  private createLight(): Mesh<SphereGeometry, MeshBasicMaterial> {
     const geometry = new SphereGeometry(1000, 32, 32)
     const material = new MeshBasicMaterial({ color: '#ffff00' })
 
     return new Mesh(geometry, material)
   }
 
-  private update(): void {
-    this.grid.visible = orbisStore.visibleGrid
-    this.scene.background = this.color.set(orbisStore.backgroundColor)
+  private animate(time: number): void {
+    const delta = this.lastFrameTime === 0 ? 0 : Math.min(time - this.lastFrameTime, 100)
+    this.lastFrameTime = time
+
+    this.controls.update(delta)
+    this.renderer.render(this.scene, this.camera)
   }
 
-  private animate(): void {
-    this.update()
-    this.controls.update(performance.now())
-    this.renderer.render(this.scene, this.camera)
-    this.renderer.setAnimationLoop(this.boundOnAnimate)
+  private resize(): void {
+    this.camera.aspect = window.innerWidth / window.innerHeight
+    this.camera.updateProjectionMatrix()
+    this.renderer.setPixelRatio(devicePixelRatio)
+    this.renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
   private async loadTextures(): Promise<void> {
@@ -108,23 +159,30 @@ class Orbis {
       const loader = new ImageBitmapLoader()
       loader.setOptions({ imageOrientation: 'flipY' })
 
-      const diffuseBitmap = await loader.loadAsync('storage/moon.jpg')
-      const nightBitmap = await loader.loadAsync('storage/night.jpg')
-
+      const [diffuseBitmap, nightBitmap] = await Promise.all([
+        loader.loadAsync('storage/moon.jpg'),
+        loader.loadAsync('storage/night.jpg')
+      ])
       const diffuse = new Texture(diffuseBitmap)
-      diffuse.needsUpdate = true
       const night = new Texture(nightBitmap)
+
+      diffuse.needsUpdate = true
       night.needsUpdate = true
 
-      this.sphere.setDiffuse(diffuse)
-      this.sphere.setNight(night)
-    } catch (error) {
-      console.error('Error loading textures:', error)
-    }
-  }
+      if (this.disposed) {
+        diffuse.dispose()
+        night.dispose()
+        return
+      }
 
-  private setRadius(radius: number): void {
-    this.object3D.scale.setScalar(radius)
+      this.textures.push(diffuse, night)
+      this.planet.setDiffuse(diffuse)
+      this.planet.setNight(night)
+    } catch (error) {
+      if (!this.disposed) {
+        console.error('Error loading textures:', error)
+      }
+    }
   }
 }
 
