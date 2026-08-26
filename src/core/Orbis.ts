@@ -16,7 +16,7 @@ import {
 } from 'three'
 import { AstroControls } from '@/core/framework/controls/AstroControls'
 import { orbisStore } from '@/editor/store/OrbisStore'
-import { Planet } from '@/core/renderable/Planet.ts'
+import { Planet } from '@/core/renderable/Planet'
 
 class Orbis {
   public scene: Scene
