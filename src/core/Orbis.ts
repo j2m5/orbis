@@ -17,7 +17,6 @@ import {
 import { AstroControls } from '@/core/framework/controls/AstroControls'
 import { orbisStore } from '@/editor/store/OrbisStore'
 import { Planet } from '@/core/renderable/Planet.ts'
-import { degToRad } from 'three/src/math/MathUtils'
 
 class Orbis {
   public scene: Scene
@@ -73,7 +72,7 @@ class Orbis {
     this.sphere = new Planet()
     this.object3D = this.sphere.make()
     this.object3D.position.set(0, 0, 0).add(this.origin)
-    this.object3D.rotateY(degToRad(150))
+    this.object3D.rotateY(150 * Math.PI / 180)
 
     this.loadTextures()
 
