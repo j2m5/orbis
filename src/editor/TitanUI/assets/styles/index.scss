@@ -478,6 +478,125 @@
   }
 }
 
+.titan-file-field {
+  .titan-file-control {
+    align-items: stretch;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(2px);
+    border: 1px solid #f0f0f0;
+    box-sizing: border-box;
+    display: flex;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .titan-file-native {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .titan-file-select {
+    align-items: center;
+    border-right: 1px solid #f0f0f0;
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    padding: 10px;
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  .titan-file-name {
+    display: block;
+    flex: 1 1 auto;
+    font-size: 14px;
+    min-width: 0;
+    overflow: hidden;
+    padding: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &.placeholder {
+      color: #888888;
+    }
+  }
+
+  .titan-file-clear {
+    background: none;
+    border: none;
+    border-left: 1px solid #444444;
+    color: #f0f0f0;
+    cursor: pointer;
+    flex: 0 0 38px;
+    font-family: "Google Sans", sans-serif;
+    font-size: 20px;
+    outline: none;
+    padding: 0;
+
+    &:hover:not(:disabled) {
+      background: #bbbbbb;
+      color: #444444;
+    }
+  }
+
+  .titan-field-message {
+    color: #888888;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  &:not(.disabled) {
+    .titan-file-control:hover,
+    &:focus-within .titan-file-control {
+      background: rgba(0, 0, 0, 0.35);
+      border-color: #bbbbbb;
+    }
+
+    .titan-file-native:focus-visible + .titan-file-select,
+    .titan-file-select:hover {
+      background: #bbbbbb;
+      color: #444444;
+    }
+  }
+
+  &.invalid {
+    .titan-file-control,
+    &:not(.disabled) .titan-file-control:hover,
+    &:not(.disabled):focus-within .titan-file-control {
+      border-color: #c0392b;
+    }
+
+    .titan-field-message {
+      color: #c0392b;
+    }
+  }
+
+  &.disabled {
+    .titan-file-control {
+      border-color: #444444;
+      color: #888888;
+    }
+
+    .titan-file-select,
+    .titan-file-clear {
+      color: #888888;
+      cursor: not-allowed;
+    }
+
+    .titan-file-select {
+      border-right-color: #444444;
+      pointer-events: none;
+    }
+  }
+}
+
 .titan-textarea {
   resize: vertical;
   min-height: 60px;

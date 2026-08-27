@@ -121,6 +121,16 @@ export interface TitanInputProps extends TitanFieldProps {
   onChange(value: string): void
 }
 
+export interface TitanFileInputProps extends TitanFieldProps {
+  accept?: string
+  buttonLabel?: string
+  fileName?: string
+  message?: string
+  placeholder?: string
+  onChange(file: File): void
+  onClear?(): void
+}
+
 export interface TitanTextareaProps extends TitanFieldProps {
   value: string
   placeholder?: string

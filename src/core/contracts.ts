@@ -15,6 +15,10 @@ export interface PlanetParameters {
   radius: number
 }
 
+export const PLANET_TEXTURE_SLOTS = ['diffuse', 'night'] as const
+
+export type PlanetTextureSlot = (typeof PLANET_TEXTURE_SLOTS)[number]
+
 export interface AstroControlsSettings {
   enabled: boolean
   autoForward: boolean

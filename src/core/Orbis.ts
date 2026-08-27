@@ -2,14 +2,12 @@ import {
   AxesHelper,
   Color,
   GridHelper,
-  ImageBitmapLoader,
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
   Sphere,
   SphereGeometry,
-  Texture,
   Vector3,
   WebGLRenderer
 } from 'three'
@@ -29,7 +27,6 @@ class Orbis {
   private readonly origin: Vector3 = new Vector3(100000, 0, 0)
   private readonly boundOnAnimate: (time: number) => void
   private readonly boundOnResize: () => void
-  private readonly textures: Texture[] = []
 
   private settings: OrbisSettings = { ...DEFAULT_ORBIS_SETTINGS }
   private grid: GridHelper | null = null
@@ -95,8 +92,6 @@ class Orbis {
 
     window.addEventListener('resize', this.boundOnResize)
     this.renderer.setAnimationLoop(this.boundOnAnimate)
-
-    void this.loadTextures()
   }
 
   public applySettings(settings: Readonly<OrbisSettings>): void {
@@ -147,7 +142,6 @@ class Orbis {
     this.renderer.setAnimationLoop(null)
     window.removeEventListener('resize', this.boundOnResize)
     this.controls.dispose()
-    this.textures.forEach((texture) => texture.dispose())
     this.planet.dispose()
 
     if (this.grid) {
@@ -224,37 +218,6 @@ class Orbis {
   private resizeRenderer(renderScale: number): void {
     this.renderer.setPixelRatio(devicePixelRatio * renderScale)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
-  }
-
-  private async loadTextures(): Promise<void> {
-    try {
-      const loader = new ImageBitmapLoader()
-      loader.setOptions({ imageOrientation: 'flipY' })
-
-      const [diffuseBitmap, nightBitmap] = await Promise.all([
-        loader.loadAsync('storage/moon.jpg'),
-        loader.loadAsync('storage/night.jpg')
-      ])
-      const diffuse = new Texture(diffuseBitmap)
-      const night = new Texture(nightBitmap)
-
-      diffuse.needsUpdate = true
-      night.needsUpdate = true
-
-      if (this.disposed) {
-        diffuse.dispose()
-        night.dispose()
-        return
-      }
-
-      this.textures.push(diffuse, night)
-      this.planet.setDiffuse(diffuse)
-      this.planet.setNight(night)
-    } catch (error) {
-      if (!this.disposed) {
-        console.error('Error loading textures:', error)
-      }
-    }
   }
 }
 

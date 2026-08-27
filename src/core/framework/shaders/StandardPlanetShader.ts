@@ -60,6 +60,8 @@ export const StandardPlanetShader: IShader = {
       vec4 finalColor = mix(nightColor, dayColor, intensity);
 
       gl_FragColor = finalColor;
+
+      ${ShaderChunk['colorspace_fragment']}
     }
   `
 }

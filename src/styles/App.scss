@@ -8,11 +8,10 @@ body {
   padding: 0;
 }
 
-.editor-left-sidebar {
+.editor-sidebar {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  left: 10px;
   max-height: calc(100vh - 90px);
   overflow-x: hidden;
   overflow-y: auto;
@@ -20,4 +19,12 @@ body {
   position: fixed;
   top: 80px;
   z-index: 999999;
+}
+
+.editor-sidebar-left {
+  left: 10px;
+}
+
+.editor-sidebar-right {
+  right: 10px;
 }

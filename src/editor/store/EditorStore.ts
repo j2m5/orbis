@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx'
+import { makeAutoObservable, observableRef } from 'mobx'
 import {
   DEFAULT_ASTRO_CONTROLS_SETTINGS,
   DEFAULT_ORBIS_SETTINGS,
@@ -13,7 +13,8 @@ import {
   isPlanetRadius,
   type AstroControlsSettings,
   type OrbisSettings,
-  type PlanetParameters
+  type PlanetParameters,
+  type PlanetTextureSlot
 } from '@/core/contracts'
 
 class OrbisSettingsStore {
@@ -109,11 +110,67 @@ class OrbisSettingsStore {
   }
 }
 
-class PlanetParametersStore {
-  public radius: number = DEFAULT_PLANET_PARAMETERS.radius
+type PlanetTextureLoadStatus = 'empty' | 'loading' | 'ready' | 'error'
+
+class PlanetTextureAssetStore {
+  public file: File | null = null
+  public status: PlanetTextureLoadStatus = 'empty'
+  public errorMessage: string | null = null
+  public revision: number = 0
 
   public constructor() {
-    makeAutoObservable(this, {}, { autoBind: true })
+    makeAutoObservable(this, { file: observableRef }, { autoBind: true })
+  }
+
+  public get fileName(): string {
+    return this.file?.name ?? ''
+  }
+
+  public selectFile(file: File): void {
+    this.file = file
+    this.revision += 1
+    this.status = 'loading'
+    this.errorMessage = null
+  }
+
+  public clear(): void {
+    this.file = null
+    this.revision += 1
+    this.status = 'empty'
+    this.errorMessage = null
+  }
+
+  public markLoading(revision: number): void {
+    if (revision === this.revision && this.file) {
+      this.status = 'loading'
+      this.errorMessage = null
+    }
+  }
+
+  public markReady(revision: number): void {
+    if (revision === this.revision && this.file) {
+      this.status = 'ready'
+      this.errorMessage = null
+    }
+  }
+
+  public markError(revision: number, message: string): void {
+    if (revision === this.revision && this.file) {
+      this.status = 'error'
+      this.errorMessage = message
+    }
+  }
+}
+
+class PlanetStore {
+  public radius: number = DEFAULT_PLANET_PARAMETERS.radius
+  public readonly textures: Record<PlanetTextureSlot, PlanetTextureAssetStore> = {
+    diffuse: new PlanetTextureAssetStore(),
+    night: new PlanetTextureAssetStore()
+  }
+
+  public constructor() {
+    makeAutoObservable(this, { textures: false }, { autoBind: true })
   }
 
   public get snapshot(): PlanetParameters {
@@ -179,14 +236,21 @@ class AstroControlsSettingsStore {
 
 class EditorStore {
   public readonly orbis: OrbisSettingsStore
-  public readonly planet: PlanetParametersStore
+  public readonly planet: PlanetStore
   public readonly controls: AstroControlsSettingsStore
 
   public constructor() {
     this.orbis = new OrbisSettingsStore()
-    this.planet = new PlanetParametersStore()
+    this.planet = new PlanetStore()
     this.controls = new AstroControlsSettingsStore()
   }
 }
 
-export { AstroControlsSettingsStore, EditorStore, OrbisSettingsStore, PlanetParametersStore }
+export {
+  AstroControlsSettingsStore,
+  EditorStore,
+  OrbisSettingsStore,
+  PlanetStore,
+  PlanetTextureAssetStore,
+  type PlanetTextureLoadStatus
+}
