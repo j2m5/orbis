@@ -27,6 +27,14 @@ class OrbisEditorBridge {
         }
       ),
       reaction(
+        () => this.store.controls.snapshot,
+        (settings) => this.orbis.applyControlsSettings(settings),
+        {
+          equals: compareStructural,
+          fireImmediately: true
+        }
+      ),
+      reaction(
         () => this.store.planet.snapshot,
         (parameters) => this.orbis.planet.applyParameters(parameters),
         {

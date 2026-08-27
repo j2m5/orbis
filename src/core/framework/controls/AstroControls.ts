@@ -1,4 +1,11 @@
 import { Camera, EventDispatcher, Quaternion, Sphere, Spherical, Vector2, Vector3 } from 'three'
+import {
+  DEFAULT_ASTRO_CONTROLS_SETTINGS,
+  isAstroControlsMouseRotationSpeed,
+  isAstroControlsMovementSpeed,
+  isAstroControlsRollSpeed,
+  type AstroControlsSettings
+} from '@/core/contracts'
 
 type AstroControlsEventMap = {
   change: { data: Vector3 }
@@ -19,23 +26,8 @@ type MoveState = {
   rollRight: number
 }
 
-const EPS: number = 0.000001
-const lastQuaternion: Quaternion = new Quaternion()
-const lastPosition: Vector3 = new Vector3()
-
-class AstroControls extends EventDispatcher<AstroControlsEventMap> {
-  public object: Camera
-  public sphere: Sphere
-  public domElement: HTMLElement
-  public target: Vector3
-  public autoForward: boolean
-  public movementSpeed: number
-  public rollSpeed: number
-  public enabled: boolean
-
-  private spherical: Spherical = new Spherical()
-  private tmpQuaternion: Quaternion = new Quaternion()
-  private moveState: MoveState = {
+function createMoveState(): MoveState {
+  return {
     up: 0,
     down: 0,
     left: 0,
@@ -49,6 +41,35 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
     rollLeft: 0,
     rollRight: 0
   }
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+}
+
+const EPS: number = 0.000001
+
+class AstroControls extends EventDispatcher<AstroControlsEventMap> {
+  public object: Camera
+  public sphere: Sphere
+  public domElement: HTMLElement
+  public target: Vector3
+
+  private enabledValue: boolean
+  private autoForwardValue: boolean
+  private movementSpeedValue: number
+  private rollSpeedValue: number
+  private mouseRotationSpeedValue: number
+
+  private spherical: Spherical = new Spherical()
+  private tmpQuaternion: Quaternion = new Quaternion()
+  private lastQuaternion: Quaternion = new Quaternion()
+  private lastPosition: Vector3 = new Vector3()
+  private moveState: MoveState = createMoveState()
   private moveVector: Vector3 = new Vector3(0, 0, 0)
   private rotationVector: Vector3 = new Vector3(0, 0, 0)
   private isRotating: boolean = false
@@ -70,10 +91,11 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
     this.sphere = sphere
     this.domElement = domElement
     this.target = new Vector3()
-    this.autoForward = false
-    this.movementSpeed = 1.0
-    this.rollSpeed = 0.005
-    this.enabled = true
+    this.enabledValue = DEFAULT_ASTRO_CONTROLS_SETTINGS.enabled
+    this.autoForwardValue = DEFAULT_ASTRO_CONTROLS_SETTINGS.autoForward
+    this.movementSpeedValue = DEFAULT_ASTRO_CONTROLS_SETTINGS.movementSpeed
+    this.rollSpeedValue = DEFAULT_ASTRO_CONTROLS_SETTINGS.rollSpeed
+    this.mouseRotationSpeedValue = DEFAULT_ASTRO_CONTROLS_SETTINGS.mouseRotationSpeed
     this.spherical.setFromVector3(this.object.position)
 
     this.domElement.addEventListener('contextmenu', this.$contextmenu)
@@ -112,15 +134,12 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
   }
 
   private mouseup(): void {
-    if (!this.enabled) return
-
     this.isRotating = false
   }
 
   private rotateCamera(deltaX: number, deltaY: number): void {
-    const rotationSpeed: number = 1.0
-    const theta: number = 2 * Math.PI * (deltaX / window.innerWidth) * rotationSpeed
-    const phi: number = 2 * Math.PI * (deltaY / window.innerHeight) * rotationSpeed
+    const theta: number = 2 * Math.PI * (deltaX / window.innerWidth) * this.mouseRotationSpeed
+    const phi: number = 2 * Math.PI * (deltaY / window.innerHeight) * this.mouseRotationSpeed
 
     this.spherical.theta -= theta
     this.spherical.phi -= phi
@@ -135,7 +154,7 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
   }
 
   private keydown(event: KeyboardEvent): void {
-    if (event.altKey || !this.enabled) {
+    if (event.altKey || event.ctrlKey || event.metaKey || !this.enabled || isEditableTarget(event.target)) {
       return
     }
 
@@ -188,8 +207,6 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
   }
 
   private keyup(event: KeyboardEvent): void {
-    if (!this.enabled) return
-
     switch (event.code) {
       case 'KeyW':
         this.moveState.forward = 0
@@ -258,6 +275,86 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
     event.preventDefault()
   }
 
+  private resetInteractionState(): void {
+    this.moveState = createMoveState()
+    this.isRotating = false
+    this.updateMovementVector()
+    this.updateRotationVector()
+  }
+
+  public get enabled(): boolean {
+    return this.enabledValue
+  }
+
+  public get autoForward(): boolean {
+    return this.autoForwardValue
+  }
+
+  public get movementSpeed(): number {
+    return this.movementSpeedValue
+  }
+
+  public get rollSpeed(): number {
+    return this.rollSpeedValue
+  }
+
+  public get mouseRotationSpeed(): number {
+    return this.mouseRotationSpeedValue
+  }
+
+  public applySettings(settings: Readonly<AstroControlsSettings>): void {
+    this.setAutoForward(settings.autoForward)
+    this.setMovementSpeed(settings.movementSpeed)
+    this.setRollSpeed(settings.rollSpeed)
+    this.setMouseRotationSpeed(settings.mouseRotationSpeed)
+    this.setEnabled(settings.enabled)
+  }
+
+  public setEnabled(enabled: boolean): void {
+    if (enabled === this.enabledValue) {
+      return
+    }
+
+    this.enabledValue = enabled
+
+    if (!enabled) {
+      this.resetInteractionState()
+    }
+  }
+
+  public setAutoForward(autoForward: boolean): void {
+    if (autoForward === this.autoForwardValue) {
+      return
+    }
+
+    this.autoForwardValue = autoForward
+    this.updateMovementVector()
+  }
+
+  public setMovementSpeed(speed: number): void {
+    if (!isAstroControlsMovementSpeed(speed)) {
+      throw new RangeError('AstroControls movement speed must be a finite positive number')
+    }
+
+    this.movementSpeedValue = speed
+  }
+
+  public setRollSpeed(speed: number): void {
+    if (!isAstroControlsRollSpeed(speed)) {
+      throw new RangeError('AstroControls roll speed must be a finite positive number')
+    }
+
+    this.rollSpeedValue = speed
+  }
+
+  public setMouseRotationSpeed(speed: number): void {
+    if (!isAstroControlsMouseRotationSpeed(speed)) {
+      throw new RangeError('AstroControls mouse rotation speed must be a finite positive number')
+    }
+
+    this.mouseRotationSpeedValue = speed
+  }
+
   public setTarget(target: Vector3 | null): void {
     if (!target) return
 
@@ -267,7 +364,7 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
   public update(delta: number): void {
     if (!this.enabled) return
 
-    this.sphere.center.copy(this.object.position.clone())
+    this.sphere.center.copy(this.object.position)
 
     const moveMult: number = delta * this.movementSpeed
     const rotMult: number = delta * this.rollSpeed
@@ -282,12 +379,12 @@ class AstroControls extends EventDispatcher<AstroControlsEventMap> {
     this.object.quaternion.multiply(this.tmpQuaternion)
 
     if (
-      lastPosition.distanceToSquared(this.object.position) > EPS ||
-      8 * (1 - lastQuaternion.dot(this.object.quaternion)) > EPS
+      this.lastPosition.distanceToSquared(this.object.position) > EPS ||
+      8 * (1 - this.lastQuaternion.dot(this.object.quaternion)) > EPS
     ) {
-      this.dispatchEvent({ type: 'change', data: lastPosition })
-      lastQuaternion.copy(this.object.quaternion)
-      lastPosition.copy(this.object.position)
+      this.dispatchEvent({ type: 'change', data: this.lastPosition })
+      this.lastQuaternion.copy(this.object.quaternion)
+      this.lastPosition.copy(this.object.position)
     }
   }
 

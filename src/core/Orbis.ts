@@ -14,7 +14,7 @@ import {
 } from 'three'
 import { AstroControls } from '@/core/framework/controls/AstroControls'
 import { Planet } from '@/core/renderable/Planet'
-import { DEFAULT_ORBIS_SETTINGS, type OrbisSettings } from '@/core/contracts'
+import { DEFAULT_ORBIS_SETTINGS, type AstroControlsSettings, type OrbisSettings } from '@/core/contracts'
 
 class Orbis {
   public readonly scene: Scene
@@ -44,7 +44,6 @@ class Orbis {
     const cameraBoundary = new Sphere(this.camera.position.clone(), 0.000001)
     this.controls = new AstroControls(this.camera, cameraBoundary, this.renderer.domElement)
     this.controls.target.copy(this.origin)
-    this.controls.movementSpeed = 0.1
 
     this.scene.background = new Color(this.settings.backgroundColor)
     this.renderer.setPixelRatio(devicePixelRatio)
@@ -102,6 +101,10 @@ class Orbis {
     }
 
     this.settings = { ...settings }
+  }
+
+  public applyControlsSettings(settings: Readonly<AstroControlsSettings>): void {
+    this.controls.applySettings(settings)
   }
 
   public dispose(): void {
