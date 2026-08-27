@@ -1,4 +1,5 @@
 import {
+  AxesHelper,
   Color,
   GridHelper,
   ImageBitmapLoader,
@@ -16,6 +17,8 @@ import { AstroControls } from '@/core/framework/controls/AstroControls'
 import { Planet } from '@/core/renderable/Planet'
 import { DEFAULT_ORBIS_SETTINGS, type AstroControlsSettings, type OrbisSettings } from '@/core/contracts'
 
+const AXES_SIZE = 10000
+
 class Orbis {
   public readonly scene: Scene
   public readonly camera: PerspectiveCamera
@@ -30,6 +33,7 @@ class Orbis {
 
   private settings: OrbisSettings = { ...DEFAULT_ORBIS_SETTINGS }
   private grid: GridHelper | null = null
+  private axes: AxesHelper | null = null
   private light: Mesh<SphereGeometry, MeshBasicMaterial> | null = null
   private initialized: boolean = false
   private disposed: boolean = false
@@ -46,8 +50,7 @@ class Orbis {
     this.controls.target.copy(this.origin)
 
     this.scene.background = new Color(this.settings.backgroundColor)
-    this.renderer.setPixelRatio(devicePixelRatio)
-    this.renderer.setSize(window.innerWidth, window.innerHeight)
+    this.resizeRenderer(this.settings.renderScale)
     this.renderer.setClearColor('#000000', 0)
     this.camera.position.set(0, 0, -17000).add(this.origin)
     this.camera.lookAt(this.origin)
@@ -74,15 +77,20 @@ class Orbis {
     canvas.style.zIndex = '99'
     container.appendChild(canvas)
 
-    this.grid = new GridHelper(1500000, 100)
-    this.grid.visible = this.settings.visibleGrid
+    this.grid = this.createGrid(this.settings)
     this.scene.add(this.grid)
+
+    this.axes = new AxesHelper(AXES_SIZE)
+    this.axes.position.copy(this.origin)
+    this.axes.visible = this.settings.visibleAxes
+    this.scene.add(this.axes)
 
     this.planet.object3D.position.copy(this.origin)
     this.planet.object3D.rotateY((150 * Math.PI) / 180)
     this.scene.add(this.planet.object3D)
 
     this.light = this.createLight()
+    this.light.visible = this.settings.visibleLightMarker
     this.scene.add(this.light)
 
     window.addEventListener('resize', this.boundOnResize)
@@ -92,15 +100,38 @@ class Orbis {
   }
 
   public applySettings(settings: Readonly<OrbisSettings>): void {
+    const shouldRebuildGrid =
+      settings.gridSize !== this.settings.gridSize ||
+      settings.gridDivisions !== this.settings.gridDivisions ||
+      settings.gridColor !== this.settings.gridColor ||
+      settings.gridCenterColor !== this.settings.gridCenterColor
+    const shouldResizeRenderer = settings.renderScale !== this.settings.renderScale
+
     if (settings.backgroundColor !== this.settings.backgroundColor) {
       this.scene.background = new Color(settings.backgroundColor)
     }
 
-    if (this.grid && settings.visibleGrid !== this.settings.visibleGrid) {
-      this.grid.visible = settings.visibleGrid
+    if (this.grid) {
+      if (shouldRebuildGrid) {
+        this.replaceGrid(settings)
+      } else {
+        this.applyGridAppearance(this.grid, settings)
+      }
+    }
+
+    if (this.axes) {
+      this.axes.visible = settings.visibleAxes
+    }
+
+    if (this.light) {
+      this.light.visible = settings.visibleLightMarker
     }
 
     this.settings = { ...settings }
+
+    if (shouldResizeRenderer) {
+      this.resizeRenderer(settings.renderScale)
+    }
   }
 
   public applyControlsSettings(settings: Readonly<AstroControlsSettings>): void {
@@ -120,9 +151,11 @@ class Orbis {
     this.planet.dispose()
 
     if (this.grid) {
-      this.grid.geometry.dispose()
-      const materials = Array.isArray(this.grid.material) ? this.grid.material : [this.grid.material]
-      materials.forEach((material) => material.dispose())
+      this.grid.dispose()
+    }
+
+    if (this.axes) {
+      this.axes.dispose()
     }
 
     if (this.light) {
@@ -142,6 +175,37 @@ class Orbis {
     return new Mesh(geometry, material)
   }
 
+  private createGrid(settings: Readonly<OrbisSettings>): GridHelper {
+    const grid = new GridHelper(settings.gridSize, settings.gridDivisions, settings.gridCenterColor, settings.gridColor)
+
+    this.applyGridAppearance(grid, settings)
+
+    return grid
+  }
+
+  private replaceGrid(settings: Readonly<OrbisSettings>): void {
+    if (this.grid) {
+      this.scene.remove(this.grid)
+      this.grid.dispose()
+    }
+
+    this.grid = this.createGrid(settings)
+    this.scene.add(this.grid)
+  }
+
+  private applyGridAppearance(grid: GridHelper, settings: Readonly<OrbisSettings>): void {
+    const isTransparent = settings.gridOpacity < 1
+
+    grid.visible = settings.visibleGrid
+    grid.material.opacity = settings.gridOpacity
+    grid.material.depthWrite = !isTransparent
+
+    if (grid.material.transparent !== isTransparent) {
+      grid.material.transparent = isTransparent
+      grid.material.needsUpdate = true
+    }
+  }
+
   private animate(time: number): void {
     const delta = this.lastFrameTime === 0 ? 0 : Math.min(time - this.lastFrameTime, 100)
     this.lastFrameTime = time
@@ -153,7 +217,12 @@ class Orbis {
   private resize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight
     this.camera.updateProjectionMatrix()
-    this.renderer.setPixelRatio(devicePixelRatio)
+
+    this.resizeRenderer(this.settings.renderScale)
+  }
+
+  private resizeRenderer(renderScale: number): void {
+    this.renderer.setPixelRatio(devicePixelRatio * renderScale)
     this.renderer.setSize(window.innerWidth, window.innerHeight)
   }
 

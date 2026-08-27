@@ -6,6 +6,10 @@ import {
   isAstroControlsMouseRotationSpeed,
   isAstroControlsMovementSpeed,
   isAstroControlsRollSpeed,
+  isOrbisGridDivisions,
+  isOrbisGridOpacity,
+  isOrbisGridSize,
+  isOrbisRenderScale,
   isPlanetRadius,
   type AstroControlsSettings,
   type OrbisSettings,
@@ -13,8 +17,16 @@ import {
 } from '@/core/contracts'
 
 class OrbisSettingsStore {
-  public visibleGrid: boolean = DEFAULT_ORBIS_SETTINGS.visibleGrid
   public backgroundColor: string = DEFAULT_ORBIS_SETTINGS.backgroundColor
+  public visibleGrid: boolean = DEFAULT_ORBIS_SETTINGS.visibleGrid
+  public gridSize: number = DEFAULT_ORBIS_SETTINGS.gridSize
+  public gridDivisions: number = DEFAULT_ORBIS_SETTINGS.gridDivisions
+  public gridColor: string = DEFAULT_ORBIS_SETTINGS.gridColor
+  public gridCenterColor: string = DEFAULT_ORBIS_SETTINGS.gridCenterColor
+  public gridOpacity: number = DEFAULT_ORBIS_SETTINGS.gridOpacity
+  public visibleAxes: boolean = DEFAULT_ORBIS_SETTINGS.visibleAxes
+  public visibleLightMarker: boolean = DEFAULT_ORBIS_SETTINGS.visibleLightMarker
+  public renderScale: number = DEFAULT_ORBIS_SETTINGS.renderScale
 
   public constructor() {
     makeAutoObservable(this, {}, { autoBind: true })
@@ -22,8 +34,16 @@ class OrbisSettingsStore {
 
   public get snapshot(): OrbisSettings {
     return {
+      backgroundColor: this.backgroundColor,
       visibleGrid: this.visibleGrid,
-      backgroundColor: this.backgroundColor
+      gridSize: this.gridSize,
+      gridDivisions: this.gridDivisions,
+      gridColor: this.gridColor,
+      gridCenterColor: this.gridCenterColor,
+      gridOpacity: this.gridOpacity,
+      visibleAxes: this.visibleAxes,
+      visibleLightMarker: this.visibleLightMarker,
+      renderScale: this.renderScale
     }
   }
 
@@ -33,6 +53,59 @@ class OrbisSettingsStore {
 
   public setBackgroundColor(color: string): void {
     this.backgroundColor = color
+  }
+
+  public setGridSize(size: number): void {
+    if (isOrbisGridSize(size)) {
+      this.gridSize = size
+    }
+  }
+
+  public setGridDivisions(divisions: number): void {
+    if (isOrbisGridDivisions(divisions)) {
+      this.gridDivisions = divisions
+    }
+  }
+
+  public setGridColor(color: string): void {
+    this.gridColor = color
+  }
+
+  public setGridCenterColor(color: string): void {
+    this.gridCenterColor = color
+  }
+
+  public setGridOpacity(opacity: number): void {
+    if (isOrbisGridOpacity(opacity)) {
+      this.gridOpacity = opacity
+    }
+  }
+
+  public setVisibleAxes(visible: boolean): void {
+    this.visibleAxes = visible
+  }
+
+  public setVisibleLightMarker(visible: boolean): void {
+    this.visibleLightMarker = visible
+  }
+
+  public setRenderScale(scale: number): void {
+    if (isOrbisRenderScale(scale)) {
+      this.renderScale = scale
+    }
+  }
+
+  public reset(): void {
+    this.backgroundColor = DEFAULT_ORBIS_SETTINGS.backgroundColor
+    this.visibleGrid = DEFAULT_ORBIS_SETTINGS.visibleGrid
+    this.gridSize = DEFAULT_ORBIS_SETTINGS.gridSize
+    this.gridDivisions = DEFAULT_ORBIS_SETTINGS.gridDivisions
+    this.gridColor = DEFAULT_ORBIS_SETTINGS.gridColor
+    this.gridCenterColor = DEFAULT_ORBIS_SETTINGS.gridCenterColor
+    this.gridOpacity = DEFAULT_ORBIS_SETTINGS.gridOpacity
+    this.visibleAxes = DEFAULT_ORBIS_SETTINGS.visibleAxes
+    this.visibleLightMarker = DEFAULT_ORBIS_SETTINGS.visibleLightMarker
+    this.renderScale = DEFAULT_ORBIS_SETTINGS.renderScale
   }
 }
 

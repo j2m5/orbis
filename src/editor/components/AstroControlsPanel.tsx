@@ -14,7 +14,7 @@ const AstroControlsPanel = observer(() => {
   const { controls } = useEditorStore()
 
   return (
-    <TitanContainer width={400} style={{ position: 'fixed', left: 10, top: 210, zIndex: 999999 }}>
+    <TitanContainer width={400}>
       <div style={{ display: 'grid', gap: 12 }}>
         <TitanLabel size={14}>Управление камерой</TitanLabel>
         <TitanToggle label="Управление включено" checked={controls.enabled} onChange={controls.setEnabled} />

@@ -1,9 +1,23 @@
-@use "@titanui/assets/styles/index";
+@use '@titanui/assets/styles/index';
 
 body {
   color: #f0f0f0;
-  font-family: "Google Sans", sans-serif;
+  font-family: 'Google Sans', sans-serif;
   font-size: 18px;
   margin: 0;
   padding: 0;
+}
+
+.editor-left-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  left: 10px;
+  max-height: calc(100vh - 90px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 8px;
+  position: fixed;
+  top: 80px;
+  z-index: 999999;
 }

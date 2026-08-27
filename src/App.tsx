@@ -8,8 +8,10 @@ const App = () => {
   return (
     <>
       <TitanTopbar style={{ position: 'fixed', top: 0, zIndex: 999999, width: '100%' }}>{config('name')}</TitanTopbar>
-      <OrbisSettingsPanel />
-      <AstroControlsPanel />
+      <div className="editor-left-sidebar titan-scrollbar">
+        <OrbisSettingsPanel />
+        <AstroControlsPanel />
+      </div>
       <PlanetPropertiesPanel />
     </>
   )
